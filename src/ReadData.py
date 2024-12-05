@@ -47,21 +47,15 @@ continuous_columns = ['Enrolment',
                       'Percentage of Students Receiving Special Education Services',
                       'Percentage of Students Identified as Gifted',
 
-                      'Percentage of Grade 3 Students Achieving the Provincial Standard in Reading',
-                      'Change in Grade 3 Reading Achievement Over Three Years',
-                      'Percentage of Grade 3 Students Achieving the Provincial Standard in Writing',
-                      'Change in Grade 3 Writing Achievement Over Three Years',
-                      'Percentage of Grade 3 Students Achieving the Provincial Standard in Mathematics',
-                      'Change in Grade 3 Mathematics Achievement Over Three Years',
-                      'Percentage of Grade 6 Students Achieving the Provincial Standard in Reading',
-                      'Change in Grade 6 Reading Achievement Over Three Years',
-                      'Percentage of Grade 6 Students Achieving the Provincial Standard in Writing',
-                      'Change in Grade 6 Writing Achievement Over Three Years',
-                      'Percentage of Grade 6 Students Achieving the Provincial Standard in Mathematics',
-                      'Change in Grade 6 Mathematics Achievement Over Three Years',
-
                       'Percentage of School-Aged Children Who Live in Low-Income Households',
                       'Percentage of Students Whose Parents Have No Degree, Diploma or Certificate']
+
+string_continous = ['Percentage of Grade 3 Students Achieving the Provincial Standard in Reading',
+                    'Percentage of Grade 3 Students Achieving the Provincial Standard in Writing',
+                    'Percentage of Grade 3 Students Achieving the Provincial Standard in Mathematics',
+                    'Percentage of Grade 6 Students Achieving the Provincial Standard in Reading',
+                    'Percentage of Grade 6 Students Achieving the Provincial Standard in Writing',
+                    'Percentage of Grade 6 Students Achieving the Provincial Standard in Mathematics']
 dates = []
 columns_to_drop = ['Board Number', 'Board Type', 'School Number', 'School Type', 'School Special Condition Code',
                    'School Language', 'Building Suite', 'P.O. Box', 'Street', 'Municipality',
@@ -75,18 +69,28 @@ columns_to_drop = ['Board Number', 'Board Type', 'School Number', 'School Type',
                    'Change in Grade 9 Applied Mathematics Achievement Over Three Years',
                    'Percentage of Students That Passed the Grade 10 OSSLT on Their First Attempt',
                    'Change in Grade 10 OSSLT Literacy Achievement Over Three Years',
-                   'Extract Date']
+                   'Extract Date',                       
+                   'Change in Grade 3 Reading Achievement Over Three Years',
+                    'Change in Grade 3 Writing Achievement Over Three Years',
+                    'Change in Grade 3 Mathematics Achievement Over Three Years',
+                    'Change in Grade 6 Reading Achievement Over Three Years',
+                    'Change in Grade 6 Writing Achievement Over Three Years',
+                    'Change in Grade 6 Mathematics Achievement Over Three Years',]
 
-invalid_entries = ["NA", "N/R", "N/D"]
+invalid_entries = ["NA", "N/R", "N/D", "SP"]
 
 critical_columns = ['Percentage of Grade 3 Students Achieving the Provincial Standard in Reading',
-                    'Percentage of Grade 6 Students Achieving the Provincial Standard in Reading']
+                    'Percentage of Grade 3 Students Achieving the Provincial Standard in Writing',
+                    'Percentage of Grade 3 Students Achieving the Provincial Standard in Mathematics',
+                    'Percentage of Grade 6 Students Achieving the Provincial Standard in Reading',
+                    'Percentage of Grade 6 Students Achieving the Provincial Standard in Writing',
+                    'Percentage of Grade 6 Students Achieving the Provincial Standard in Mathematics',
+                    'Enrolment']
 
 current_year = 2018
 
 # Process each dataframe
 for i in range(len(data_list)):
-
     df = data_list[i]
 
     # Drop columns_to_drop
@@ -106,11 +110,15 @@ for i in range(len(data_list)):
     df = df.dropna()
 
     # NOTE: ADD File year column
-    df['Year'] = current_year + i
+    df['Year'] = '1/1/' + str(current_year + i)
 
     # Encode school name and board name
     df['School Name'] = df['School Name'].astype('category').cat.codes
     df['Board Name'] = df['Board Name'].astype('category').cat.codes
+
+    #convert the string col to numeric values
+    for col in string_continous:
+        df[col] = df[col].str.replace('%', '').astype(float)
 
     # Update DataFrame in the list
     data_list[i] = df
@@ -124,3 +132,20 @@ print(f"Final dataset shape: {cleaned_data.shape}")
 print(cleaned_data.head())
 
 cleaned_data.to_csv(data_folder + 'output_file.csv', index=False)
+
+# preprocessing the cleaned data 
+for i in range(len(data_list)):
+    df = data_list[i]
+    # min max scaling 
+    scalar = MinMaxScaler()
+    all_numeric_coloumn = continuous_columns + string_continous
+    df[all_numeric_coloumn] = scalar.fit_transform(df[all_numeric_coloumn])
+
+    # changing the date column
+    df['Year'] = pd.to_datetime(
+        df['Year']
+    )
+
+    data_list[i] = df
+
+print(data_list[4].tail())

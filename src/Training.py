@@ -1,3 +1,21 @@
+
+# Author: Mitchell Weingust, Allison Cook, Parisha Nizam
+# Created: December 4, 2024
+# License: MIT License
+# Purpose: This python file includes code for reading data from the files in the data folder, creating and training a model
+
+# Usage: python training.py
+
+# Dependencies: None
+# Python Version: 3.6+
+
+# Modification History:
+# - Version 0 - added boilerplate code
+
+# References:
+# - https://www.python.org/dev/peps/pep-0008/
+# - Python Documentation
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,7 +24,13 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, precision_score
 from sklearn.utils import shuffle
+from keras.models import Sequential
+from keras.layers import Dense, SimpleRNN
 
+
+"""
+Loading and preprocessing of Data
+"""
 # Load datapoints in a pandas dataframe
 data_folder = '../data/'
 encoding = 'ISO-8859-1'
@@ -79,7 +103,10 @@ for i in range(len(data_list)):
     df = df.drop(columns=columns_to_drop, errors='ignore')
 
     # Drop the rows that have grade 3 or grade 6 scores as invalid entries
+    # Check for invalid entries in each column of critical_columns
     invalid_mask = df[critical_columns].isin(invalid_entries)
+
+    # Check if any invalid entries are present in each row (across the critical columns)
     rows_to_drop = invalid_mask.any(axis=1)
 
     # Drop rows with invalid entries
@@ -126,7 +153,7 @@ for i in range(len(data_list)):
 
     data_list[i] = df
 
-# A year has data with school A, B, C 
+# A year has data with school A, B, C ...
 # we have 5 years of data. 
 # group data using timestep such that we have lists of data for school A, from each year, then a list for school B with data from each year etc
 
@@ -151,3 +178,45 @@ for school_name, group in grouped_data:
 example_school = next(iter(school_yearly_data.keys()))  # Get an example school name
 print(f"Yearly data for School {example_school}:")
 print(school_yearly_data[example_school])
+
+training_data =  pd.concat(data_list[0:(len(data_list)-1)], ignore_index=True)
+test_data = data_list[len(data_list)]
+
+"""
+Building and Training Model
+"""
+class RNN:
+    
+    def __init__(self,data,time_steps):
+        self.data = data
+        self.time_steps = time_steps
+        self.model = None
+
+    def build_model(self, hidden_units, dense_units, input_shape, activation):
+        self.model = Sequential()
+        self.model.add(SimpleRNN(hidden_units, input_shape=input_shape, activation=activation[0]))
+        self.model.add(Dense(units=dense_units, activation=activation[1]))
+        self.model.compile(loss='sparse_categorical_crossentropy', optimizer='sgd')
+        return self.model
+    
+    def train(self, x_train, y_train, epochs):
+        self.model.fit(x_train, y_train, epochs=epochs)
+
+    def predict(self, input):
+        return self.model.predict(input)
+
+
+# defining the time_steps we have (by year)
+time_steps = 1
+
+# create an instance of the rnn
+my_rnn = RNN(cleaned_data,time_steps)
+
+# splitting into training and testing data
+training_data =  pd.concat(data_list[0:(len(data_list)-1)], ignore_index=True)
+test_data = data_list[len(data_list)]
+
+# build and train the model
+my_rnn.build_model(hidden_units=3, dense_units=1, input_shape=(), activation=['tanh', 'sigmoid'])
+my_rnn.train_model()
+

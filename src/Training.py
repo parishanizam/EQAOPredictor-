@@ -19,11 +19,18 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
 from sklearn.preprocessing import MinMaxScaler,StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split 
 from sklearn.metrics import accuracy_score, recall_score, precision_score
 from sklearn.utils import shuffle
+from keras.models import Sequential
+from keras.layers import Dense, SimpleRNN
 
+
+"""
+Loading and preprocessing of Data
+"""
 #Load datapoints in a pandas dataframe
 data_folder = '../data/'
 encoding = 'ISO-8859-1'
@@ -123,15 +130,15 @@ for i in range(len(data_list)):
     # Update DataFrame in the list
     data_list[i] = df
 
-# Combine all cleaned DataFrames into a single DataFrame
-cleaned_data = pd.concat(data_list, ignore_index=True)
+# # Combine all cleaned DataFrames into a single DataFrame
+# cleaned_data = pd.concat(data_list, ignore_index=True)
 
-# Print summary
-print("Data processing complete.")
-print(f"Final dataset shape: {cleaned_data.shape}")
-print(cleaned_data.head())
+# # Print summary
+# print("Data processing complete.")
+# print(f"Final dataset shape: {cleaned_data.shape}")
+# print(cleaned_data.head())
 
-cleaned_data.to_csv(data_folder + 'output_file.csv', index=False)
+# cleaned_data.to_csv(data_folder + 'output_file.csv', index=False)
 
 # preprocessing the cleaned data 
 for i in range(len(data_list)):
@@ -149,3 +156,54 @@ for i in range(len(data_list)):
     data_list[i] = df
 
 print(data_list[4].tail())
+
+# Combine all cleaned DataFrames into a single DataFrame
+cleaned_data = pd.concat(data_list, ignore_index=True)
+
+# Print summary
+print("Data processing complete.")
+print(f"Final dataset shape: {cleaned_data.shape}")
+print(cleaned_data.head())
+
+cleaned_data.to_csv(data_folder + 'output_file.csv', index=False)
+
+training_data =  pd.concat(data_list[0:(len(data_list)-1)], ignore_index=True)
+test_data = data_list[len(data_list)]
+
+"""
+Building and Training Model
+"""
+class RNN:
+    
+    def __init__(self,data,time_steps):
+        self.data = data
+        self.time_steps = time_steps
+        self.model = None
+
+    def build_model(self, hidden_units, dense_units, input_shape, activation):
+        self.model = Sequential()
+        self.model.add(SimpleRNN(hidden_units, input_shape=input_shape, activation=activation[0]))
+        self.model.add(Dense(units=dense_units, activation=activation[1]))
+        self.model.compile(loss='sparse_categorical_crossentropy', optimizer='sgd')
+        return self.model
+    
+    def train(self, x_train, y_train, epochs):
+        self.model.fit(x_train, y_train, epochs=epochs)
+
+    def predict(self, input):
+        return self.model.predict(input)
+
+
+# defining the time_steps we have (by year)
+time_steps = 1
+
+# create an instance of the rnn
+my_rnn = RNN(cleaned_data,time_steps)
+
+# splitting into training and testing data
+training_data =  pd.concat(data_list[0:(len(data_list)-1)], ignore_index=True)
+test_data = data_list[len(data_list)]
+
+# build and train the model
+my_rnn.build_model(hidden_units=3, dense_units=1, input_shape=(), activation=['tanh', 'sigmoid'])
+my_rnn.train_model()

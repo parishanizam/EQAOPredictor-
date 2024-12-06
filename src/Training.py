@@ -16,13 +16,14 @@
 # - https://www.python.org/dev/peps/pep-0008/
 # - Python Documentation
 
+import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder, OrdinalEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, recall_score, precision_score
+from sklearn.metrics import accuracy_score, mean_squared_error, recall_score, precision_score
 from sklearn.utils import shuffle
 from keras.models import Sequential
 from keras.layers import Dense, SimpleRNN
@@ -63,7 +64,7 @@ string_continous = ['Percentage of Grade 3 Students Achieving the Provincial Sta
                     'Percentage of Grade 6 Students Achieving the Provincial Standard in Writing',
                     'Percentage of Grade 6 Students Achieving the Provincial Standard in Mathematics']
 
-columns_to_drop = ['Board Number', 'Board Type', 'School Number', 'School Type', 'School Special Condition Code',
+columns_to_drop = ['Board Number', 'Board Name' , 'Board Type', 'School Number', 'School Type', 'School Special Condition Code',
                    'School Language', 'Building Suite', 'P.O. Box', 'Street', 'Municipality',
                    'City', 'Province', 'Postal Code', 'Phone Number', 'Fax Number',
                    'School Website', 'Board Website', 'Latitude', 'Longitude',
@@ -82,6 +83,18 @@ columns_to_drop = ['Board Number', 'Board Type', 'School Number', 'School Type',
                    'Change in Grade 6 Reading Achievement Over Three Years',
                    'Change in Grade 6 Writing Achievement Over Three Years',
                    'Change in Grade 6 Mathematics Achievement Over Three Years']
+
+columns_to_drop_y = [ 'School Name', 'School Level', 'Grade Range',
+                        'Enrolment',
+                      'Percentage of Students Whose First Language Is Not English',
+                      'Percentage of Students Whose First Language Is Not French',
+                      'Percentage of Students Who Are New to Canada from a Non-English Speaking Country',
+                      'Percentage of Students Who Are New to Canada from a Non-French Speaking Country',
+                      'Percentage of Students Receiving Special Education Services',
+                      'Percentage of Students Identified as Gifted',
+                      'Percentage of School-Aged Children Who Live in Low-Income Households',
+                      'Percentage of Students Whose Parents Have No Degree, Diploma or Certificate'
+]
 
 invalid_entries = ["NA", "N/R", "N/D", "SP"]
 
@@ -119,8 +132,15 @@ for i in range(len(data_list)):
     df['Year'] = '1/1/' + str(current_year + i)
 
     # Encode school name and board name
-    df['School Name'] = df['School Name'].astype('category').cat.codes
-    df['Board Name'] = df['Board Name'].astype('category').cat.codes
+    label_encoder = LabelEncoder()
+    ordinal_encoder = OrdinalEncoder()
+
+    # print(df['School Name'])
+
+    df['School Name'] = label_encoder.fit_transform(df['School Name'])# .astype('category').cat.codes
+    # df['Board Name'] = label_encoder.fit_transform(df['Board Name']) #.astype('category').cat.codes
+
+    # print(df['School Name'])
 
     # Convert string percentages to numeric
     for col in string_continous:
@@ -130,7 +150,7 @@ for i in range(len(data_list)):
     data_list[i] = df
 
 # Combine all cleaned DataFrames into a single DataFrame
-cleaned_data = pd.concat(data_list, ignore_index=True)
+cleaned_data = pd.concat(data_list[0:3], ignore_index=True)
 
 # Print summary
 print("Data processing complete.")
@@ -162,25 +182,68 @@ print("Grouping data by school and year...")
 grouped_data = cleaned_data.groupby('School Name')
 
 # Create a dictionary where each school has a list of yearly data
-school_yearly_data = {}
+school_yearly_data = [0 for i in range(len(grouped_data))]
 
 for school_name, group in grouped_data:
     # Sort the data by Year
     group_sorted = group.sort_values('Year')
     
     # Convert each year's data into a list (excluding the 'School Name' column)
-    school_data = group_sorted.drop(columns=['School Name', 'Year']).values.tolist()
+    school_data = group.drop(columns=['School Name', 'Year']).values.tolist()
     
     # Save the list of yearly data for the school
+    # print(school_name)
     school_yearly_data[school_name] = school_data
 
 # Example output for a specific school
-example_school = next(iter(school_yearly_data.keys()))  # Get an example school name
-print(f"Yearly data for School {example_school}:")
-print(school_yearly_data[example_school])
+example_school = school_yearly_data[0]  # Get an example school name
+print(f"Yearly data for School : {school_name} , {example_school}:")
+# print(school_yearly_data)
 
-training_data =  pd.concat(data_list[0:(len(data_list)-1)], ignore_index=True)
-test_data = data_list[len(data_list)]
+# defining the training y
+grouped_data = data_list[3].groupby('School Name')
+
+# Create a dictionary where each school has a list of yearly data
+y = [0 for i in range(len(grouped_data))]
+
+for school_name, group in grouped_data:
+    # Sort the data by Year
+    # group_sorted = group.sort_values('Year')
+    
+    # Convert each year's data into a list (excluding the 'School Name' column)
+    school_data = group.drop(columns=columns_to_drop_y).values.tolist()
+    
+    # Save the list of yearly data for the school
+    # print(school_name)
+    y[school_name] = school_data
+
+# Example output for a specific school
+example_school = school_yearly_data[0]  # Get an example school name
+print(f"Y data : {school_name} , {example_school}:")
+
+# grouping for test data
+grouped_test = data_list[4].groupby('School Name')
+
+# Create a dictionary where each school has a list of yearly data
+test_data = [0 for i in range(len(grouped_test))]
+
+for school_name, group in grouped_test:
+    # Sort the data by Year
+    # test_sorted = group.sort_values('Year')
+    
+    # Convert each year's data into a list (excluding the 'School Name' column)
+    data = group.drop(columns=['School Name', 'Year']).values.tolist()
+    
+    # Save the list of yearly data for the school
+    # print(school_name)
+    test_data[school_name] = data
+
+# Example output for a specific school
+example_school = test_data[0]  # Get an example school name
+# print(f"Test data for School : {school_name} , {example_school}:")
+
+# training_data =  pd.concat(data_list[0:(len(data_list)-1)], ignore_index=True)
+# test_data = data_list[len(data_list)]
 
 """
 Building and Training Model
@@ -213,10 +276,31 @@ time_steps = 1
 my_rnn = RNN(cleaned_data,time_steps)
 
 # splitting into training and testing data
-training_data =  pd.concat(data_list[0:(len(data_list)-1)], ignore_index=True)
-test_data = data_list[len(data_list)]
+training_data = school_yearly_data
+
+# split training and test
+# test_data = data_list[len(data_list)-1]
+n = len(categorical_columns) + len(string_continous) + len(continuous_columns) - 2
 
 # build and train the model
-my_rnn.build_model(hidden_units=3, dense_units=1, input_shape=(), activation=['tanh', 'sigmoid'])
-my_rnn.train_model()
+my_rnn.build_model(hidden_units=3, dense_units=1, input_shape=(4, n), activation=['tanh', 'sigmoid'])
+my_rnn.train(school_yearly_data, y, epochs=20)
 
+train_predict = my_rnn.predict(school_yearly_data)
+
+print("RMSE:", 100 * math.sqrt(mean_squared_error(y, train_predict)))
+
+# Plot the results
+# actual = np.append(y)
+# predictions = np.append(train_predict)
+# rows = len(actual)
+# plt.figure(figsize=(15, 6), dpi=80)
+# plt.plot(range(rows), actual)
+# plt.plot(range(rows), predictions, color='r')
+# plt.axvline(x=len(y), color='g')
+# plt.legend(['Actual', 'Predictions'])
+# plt.xlabel('Time Steps')
+# plt.ylabel('Scaled Data')
+# plt.suptitle('RNN Prediction Demo', fontsize=16)
+# plt.title('Train {green line} Test')
+# plt.show()

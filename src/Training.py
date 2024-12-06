@@ -1,30 +1,13 @@
-# Author: Mitchell Weingust
-# Created: December 4, 2024
-# License: MIT License
-# Purpose: This python file includes code for reading data from the files in the data folder
-
-# Usage: python ReadData.py
-
-# Dependencies: None
-# Python Version: 3.6+
-
-# Modification History:
-# - Version 0 - added boilerplate code
-
-# References:
-# - https://www.python.org/dev/peps/pep-0008/
-# - Python Documentation
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.preprocessing import MinMaxScaler,StandardScaler, LabelEncoder
-from sklearn.model_selection import train_test_split 
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, precision_score
 from sklearn.utils import shuffle
 
-#Load datapoints in a pandas dataframe
+# Load datapoints in a pandas dataframe
 data_folder = '../data/'
 encoding = 'ISO-8859-1'
 
@@ -37,7 +20,7 @@ data_5 = pd.read_csv(data_folder + 'sif_data_table_2021_2022_en.csv', encoding=e
 
 data_list = [data_1, data_2, data_3, data_4, data_5]
 
-# drop first and last column 
+# Drop first and last column
 categorical_columns = ['School Name', 'Board Name', 'School Level', 'Grade Range']
 continuous_columns = ['Enrolment',
                       'Percentage of Students Whose First Language Is Not English',
@@ -46,7 +29,6 @@ continuous_columns = ['Enrolment',
                       'Percentage of Students Who Are New to Canada from a Non-French Speaking Country',
                       'Percentage of Students Receiving Special Education Services',
                       'Percentage of Students Identified as Gifted',
-
                       'Percentage of School-Aged Children Who Live in Low-Income Households',
                       'Percentage of Students Whose Parents Have No Degree, Diploma or Certificate']
 
@@ -56,7 +38,7 @@ string_continous = ['Percentage of Grade 3 Students Achieving the Provincial Sta
                     'Percentage of Grade 6 Students Achieving the Provincial Standard in Reading',
                     'Percentage of Grade 6 Students Achieving the Provincial Standard in Writing',
                     'Percentage of Grade 6 Students Achieving the Provincial Standard in Mathematics']
-dates = []
+
 columns_to_drop = ['Board Number', 'Board Type', 'School Number', 'School Type', 'School Special Condition Code',
                    'School Language', 'Building Suite', 'P.O. Box', 'Street', 'Municipality',
                    'City', 'Province', 'Postal Code', 'Phone Number', 'Fax Number',
@@ -71,11 +53,11 @@ columns_to_drop = ['Board Number', 'Board Type', 'School Number', 'School Type',
                    'Change in Grade 10 OSSLT Literacy Achievement Over Three Years',
                    'Extract Date',                       
                    'Change in Grade 3 Reading Achievement Over Three Years',
-                    'Change in Grade 3 Writing Achievement Over Three Years',
-                    'Change in Grade 3 Mathematics Achievement Over Three Years',
-                    'Change in Grade 6 Reading Achievement Over Three Years',
-                    'Change in Grade 6 Writing Achievement Over Three Years',
-                    'Change in Grade 6 Mathematics Achievement Over Three Years',]
+                   'Change in Grade 3 Writing Achievement Over Three Years',
+                   'Change in Grade 3 Mathematics Achievement Over Three Years',
+                   'Change in Grade 6 Reading Achievement Over Three Years',
+                   'Change in Grade 6 Writing Achievement Over Three Years',
+                   'Change in Grade 6 Mathematics Achievement Over Three Years']
 
 invalid_entries = ["NA", "N/R", "N/D", "SP"]
 
@@ -97,10 +79,7 @@ for i in range(len(data_list)):
     df = df.drop(columns=columns_to_drop, errors='ignore')
 
     # Drop the rows that have grade 3 or grade 6 scores as invalid entries
-    # Check for invalid entries in each column of critical_columns
     invalid_mask = df[critical_columns].isin(invalid_entries)
-
-    # Check if any invalid entries are present in each row (across the critical columns)
     rows_to_drop = invalid_mask.any(axis=1)
 
     # Drop rows with invalid entries
@@ -109,18 +88,18 @@ for i in range(len(data_list)):
     # Drop rows with empty values
     df = df.dropna()
 
-    # NOTE: ADD File year column
+    # Add a 'Year' column
     df['Year'] = '1/1/' + str(current_year + i)
 
     # Encode school name and board name
     df['School Name'] = df['School Name'].astype('category').cat.codes
     df['Board Name'] = df['Board Name'].astype('category').cat.codes
 
-    #convert the string col to numeric values
+    # Convert string percentages to numeric
     for col in string_continous:
         df[col] = df[col].str.replace('%', '').astype(float)
 
-    # Update DataFrame in the list
+    # Update the cleaned DataFrame in the list
     data_list[i] = df
 
 # Combine all cleaned DataFrames into a single DataFrame
@@ -133,19 +112,42 @@ print(cleaned_data.head())
 
 cleaned_data.to_csv(data_folder + 'output_file.csv', index=False)
 
-# preprocessing the cleaned data 
+# Preprocessing the cleaned data
 for i in range(len(data_list)):
     df = data_list[i]
-    # min max scaling 
-    scalar = MinMaxScaler()
-    all_numeric_coloumn = continuous_columns + string_continous
-    df[all_numeric_coloumn] = scalar.fit_transform(df[all_numeric_coloumn])
 
-    # changing the date column
-    df['Year'] = pd.to_datetime(
-        df['Year']
-    )
+    # Min-max scaling
+    scalar = MinMaxScaler()
+    all_numeric_columns = continuous_columns + string_continous
+    df[all_numeric_columns] = scalar.fit_transform(df[all_numeric_columns])
+
+    # Changing the 'Year' column
+    df['Year'] = pd.to_datetime(df['Year'])
 
     data_list[i] = df
 
-print(data_list[4].tail())
+# A year has data with school A, B, C 
+# we have 5 years of data. 
+# group data using timestep such that we have lists of data for school A, from each year, then a list for school B with data from each year etc
+
+# Group data by school and year
+print("Grouping data by school and year...")
+grouped_data = cleaned_data.groupby('School Name')
+
+# Create a dictionary where each school has a list of yearly data
+school_yearly_data = {}
+
+for school_name, group in grouped_data:
+    # Sort the data by Year
+    group_sorted = group.sort_values('Year')
+    
+    # Convert each year's data into a list (excluding the 'School Name' column)
+    school_data = group_sorted.drop(columns=['School Name', 'Year']).values.tolist()
+    
+    # Save the list of yearly data for the school
+    school_yearly_data[school_name] = school_data
+
+# Example output for a specific school
+example_school = next(iter(school_yearly_data.keys()))  # Get an example school name
+print(f"Yearly data for School {example_school}:")
+print(school_yearly_data[example_school])

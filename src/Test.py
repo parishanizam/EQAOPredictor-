@@ -28,6 +28,8 @@ from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dropout
 from keras.layers import LSTM
 import tensorflow as tf
+from sklearn.metrics import accuracy_score, recall_score, precision_score
+
 
 
 """
@@ -130,7 +132,7 @@ for i in range(len(data_list)):
     df['Board Name'] = label_encoder.fit_transform(df['Board Name']) #.astype('category').cat.codes
 
     # Rearrange columns so the target column is the last one
-    target_column = 'Percentage of Grade 3 Students Achieving the Provincial Standard in Reading'
+    target_column = 'Percentage of Students Identified as Gifted'
     all_columns = list(df.columns)
     all_columns.remove(target_column)  # Remove the target column
     all_columns.append(target_column)  # Append it to the end
@@ -181,10 +183,10 @@ for school_name, group in cleaned_data.groupby(['School Name', 'Board Name']):
     i += 1
 # print("Columns after preprocessing:", group_sorted.drop(columns=['School Name', 'Year']).columns)
 
-# # Ensure the training data (features) and target data are separated correctly
-# print("\nFeature columns for training data (x_train):")
-# feature_columns = list(cleaned_data.columns.difference(['School Name', 'Year', target_column]))
-# print(feature_columns)
+# Ensure the training data (features) and target data are separated correctly
+print("\nFeature columns for training data (x_train):")
+feature_columns = list(cleaned_data.columns.difference(['School Name', 'Year', target_column]))
+print(feature_columns)
 
 print("\nTarget column for training data (y_train):")
 print(target_column)
@@ -273,7 +275,7 @@ class RNN:
 
         # Using MSE for model 
         # self.model.compile(loss='mean_squared_error', optimizer='adam')
-        self.model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=0.01))
+        self.model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))
         return self.model
     
     def train(self, x_train, y_train, epochs):
@@ -293,7 +295,7 @@ Training Model
 my_rnn = RNN()
 # my_rnn.build_model(hidden_units=50, dense_units=1, input_shape=(time_steps, features), activation=['tanh', 'linear'])
 my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'linear'])
-my_rnn.train(x_train, y_train, epochs=10)
+my_rnn.train(x_train, y_train, epochs=15)
 
 # Make predictions and targets, flatten results
 train_predict = my_rnn.predict(x_train)
@@ -302,6 +304,36 @@ actual_y = y_train.flatten()[:train_predict.size]
 # testing
 test_predict = my_rnn.predict(x_test)
 actual_test_y = y_test.flatten()[:test_predict.size]
+
+
+"""
+Accuracy, Precision, Recall Calculations
+"""
+
+# Threshold predictions to binary classification (e.g., 0.5 threshold)
+train_predict_binary = (train_predict.flatten() > 0.5).astype(int)
+y_train_binary = (y_train.flatten() > 0.5).astype(int)
+
+test_predict_binary = (test_predict.flatten() > 0.5).astype(int)
+y_test_binary = (y_test.flatten() > 0.5).astype(int)
+
+# Calculate precision, recall, and accuracy for training data
+train_precision = precision_score(y_train_binary, train_predict_binary)
+train_accuracy = accuracy_score(y_train_binary, train_predict_binary)
+
+# Calculate precision, recall, and accuracy for testing data
+test_precision = precision_score(y_test_binary, test_predict_binary)
+test_accuracy = accuracy_score(y_test_binary, test_predict_binary)
+
+# Print results
+print("Training Metrics:")
+print(f"Precision: {train_precision:.4f}")
+print(f"Accuracy: {train_accuracy:.4f}")
+
+print("\nTesting Metrics:")
+print(f"Precision: {test_precision:.4f}")
+print(f"Accuracy: {test_accuracy:.4f}")
+
 
 """
 Calculate RMSE and Plot Results of the Model

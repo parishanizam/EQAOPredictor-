@@ -9,9 +9,6 @@
 # Dependencies: None
 # Python Version: 3.6+
 
-# Modification History:
-# - Version 0 - added boilerplate code
-
 # References:
 # - https://www.python.org/dev/peps/pep-0008/
 # - Python Documentation
@@ -70,7 +67,7 @@ string_continous = ['Percentage of Grade 3 Students Achieving the Provincial Sta
                     'Percentage of Grade 6 Students Achieving the Provincial Standard in Mathematics']
 
 # coloumns to drop from dataset
-columns_to_drop = ['Board Number', 'Board Name' , 'Board Type', 'School Number', 'School Type', 'School Special Condition Code',
+columns_to_drop = ['Board Number', 'Board Type', 'School Number', 'School Type', 'School Special Condition Code',
                    'School Language', 'Building Suite', 'P.O. Box', 'Street', 'Municipality',
                    'City', 'Province', 'Postal Code', 'Phone Number', 'Fax Number',
                    'School Website', 'Board Website', 'Latitude', 'Longitude',
@@ -89,19 +86,6 @@ columns_to_drop = ['Board Number', 'Board Name' , 'Board Type', 'School Number',
                    'Change in Grade 6 Reading Achievement Over Three Years',
                    'Change in Grade 6 Writing Achievement Over Three Years',
                    'Change in Grade 6 Mathematics Achievement Over Three Years']
-
-# coloumns to drop for target label
-columns_to_drop_y = [ 'School Name', 'School Level', 'Grade Range',
-                        'Enrolment',
-                      'Percentage of Students Whose First Language Is Not English',
-                      'Percentage of Students Whose First Language Is Not French',
-                      'Percentage of Students Who Are New to Canada from a Non-English Speaking Country',
-                      'Percentage of Students Who Are New to Canada from a Non-French Speaking Country',
-                      'Percentage of Students Receiving Special Education Services',
-                      'Percentage of Students Identified as Gifted',
-                      'Percentage of School-Aged Children Who Live in Low-Income Households',
-                      'Percentage of Students Whose Parents Have No Degree, Diploma or Certificate'
-]
 
 invalid_entries = ["NA", "N/R", "N/D", "SP"]
 
@@ -143,9 +127,16 @@ for i in range(len(data_list)):
     label_encoder = LabelEncoder()
 
     df['School Name'] = label_encoder.fit_transform(df['School Name'])# .astype('category').cat.codes
-    # df['Board Name'] = label_encoder.fit_transform(df['Board Name']) #.astype('category').cat.codes
+    df['Board Name'] = label_encoder.fit_transform(df['Board Name']) #.astype('category').cat.codes
 
-    df = df.drop(columns=categorical_columns[1:], errors='ignore')
+    # Rearrange columns so the target column is the last one
+    target_column = 'Percentage of Grade 3 Students Achieving the Provincial Standard in Reading'
+    all_columns = list(df.columns)
+    all_columns.remove(target_column)  # Remove the target column
+    all_columns.append(target_column)  # Append it to the end
+    df = df[all_columns]
+
+    df = df.drop(columns=categorical_columns[2:], errors='ignore')
 
     # Convert string percentages to numeric
     for col in string_continous:
@@ -176,39 +167,84 @@ cleaned_data.to_csv(data_folder + 'output_file.csv', index=False)
 
 # Group data by school and year
 print("Grouping data by school and year...")
-grouped_data = cleaned_data.groupby('School Name')
+grouped_data = cleaned_data.groupby(['School Name', 'Board Name'])
 
 # Create a dictionary where each school has a list of yearly data
 school_yearly_data = {}
 y_data = {}
-
-for school_name, group in cleaned_data.groupby('School Name'):
+i = 0
+for school_name, group in cleaned_data.groupby(['School Name', 'Board Name']):
     group_sorted = group.sort_values('Year')
-    school_data = group_sorted.drop(columns=['School Name', 'Year']).values
-    school_yearly_data[school_name] = school_data[:-1]  # Use all but the last year for training
-    y_data[school_name] = school_data[1:, -1]  # Use the last column as the target
+    school_data = group_sorted.drop(columns=['School Name', 'Year', 'Board Name', target_column]).values
+    school_yearly_data[i] = school_data[:-1]  # Use all but the last year for training
+    y_data[i] = school_data[:-1, -1]  # Use the last column as the target
+    i += 1
+# print("Columns after preprocessing:", group_sorted.drop(columns=['School Name', 'Year']).columns)
 
-# maximum time steps to have consistent sequence 
-max_time_steps = max(len(data) for data in school_yearly_data.values())
+# # Ensure the training data (features) and target data are separated correctly
+# print("\nFeature columns for training data (x_train):")
+# feature_columns = list(cleaned_data.columns.difference(['School Name', 'Year', target_column]))
+# print(feature_columns)
+
+print("\nTarget column for training data (y_train):")
+print(target_column)
 
 # Pad sequences for x_train (ensure the correct shape for input values)
 x_train = pad_sequences(
     list(school_yearly_data.values()), 
-    maxlen=max_time_steps, 
+    maxlen=5, 
+    dtype='float32', 
+    padding='post'
+)
+
+# print(x_train)
+
+
+# Pad sequences for y_train (ensure the correct shape for target values)
+y_train = pad_sequences(
+    list(y_data.values()), 
+    maxlen=1,  # Targets will be one step fewer
+    dtype='float32', 
+    padding='post'
+)
+
+# Create a dictionary where each school has a list of yearly data
+school_yearly_data_test = {}
+y_test_data = {}
+i = 0
+for school_name, group in data_list[-1].groupby(['School Name', 'Board Name']):
+    # group_sorted = group.sort_values('Year')
+    school_data = group.drop(columns=['School Name', 'Year', 'Board Name', target_column]).values
+    school_yearly_data_test[i] = school_data[:]
+    y_test_data[i] = school_data[:,-1]  # Use the last column as the target
+    i += 1
+
+# maximum time steps to have consistent sequence 
+# max_time_steps = max(len(data) for data in school_yearly_data_test.values())
+
+# x_test = pd.Series(list(school_yearly_data_test.values()))
+# y_test = pd.DataFrame(list(y_test_data.values()))
+
+# Pad sequences for x_train (ensure the correct shape for input values)
+x_test = pad_sequences(
+    list(school_yearly_data_test.values()), 
+    maxlen=5, 
     dtype='float32', 
     padding='post'
 )
 
 # Pad sequences for y_train (ensure the correct shape for target values)
-y_train = pad_sequences(
-    list(y_data.values()), 
-    maxlen=max_time_steps - 1,  # Targets will be one step fewer
+y_test = pad_sequences(
+    list(y_test_data.values()), 
+    maxlen=1,  # Targets will be one step fewer
     dtype='float32', 
     padding='post'
 )
 
 # Ensure the data shapes are correct for RNN
 samples, time_steps, features = x_train.shape
+print(x_train.shape)
+print(x_test.shape)
 
 # # Example output for a specific school
 # example_school = school_yearly_data[0]  # Get an example school name
@@ -248,7 +284,7 @@ class RNN:
 
 
 # defining the time_steps we have (by year)
-time_steps = 12
+time_steps = 5
 
 """
 Training Model
@@ -257,12 +293,15 @@ Training Model
 my_rnn = RNN()
 # my_rnn.build_model(hidden_units=50, dense_units=1, input_shape=(time_steps, features), activation=['tanh', 'linear'])
 my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'linear'])
-my_rnn.train(x_train, y_train, epochs=25)
+my_rnn.train(x_train, y_train, epochs=10)
 
 # Make predictions and targets, flatten results
 train_predict = my_rnn.predict(x_train)
 actual_y = y_train.flatten()[:train_predict.size]
 
+# testing
+test_predict = my_rnn.predict(x_test)
+actual_test_y = y_test.flatten()[:test_predict.size]
 
 """
 Calculate RMSE and Plot Results of the Model
@@ -271,13 +310,37 @@ Calculate RMSE and Plot Results of the Model
 # RMSE calculation 
 rmse = math.sqrt(mean_squared_error(actual_y, train_predict.flatten()))
 print("RMSE:", rmse)
+rmse_test = math.sqrt(mean_squared_error(actual_test_y, test_predict.flatten()))
+print("Test RMSE:", rmse_test)
 
 # Plot the actual results vs predicted results 
-plt.figure(figsize=(10, 6))
-plt.plot(actual_y, label='Actual')
-plt.plot(train_predict.flatten(), label='Predicted', linestyle='--')
-plt.legend()
-plt.xlabel('Samples')
-plt.ylabel('Target Values')
-plt.title('RNN Prediction vs Actual')
+# plt.figure(figsize=(10, 6))
+# plt.plot(actual_test_y, label='Actual')
+# plt.plot(test_predict.flatten(), label='Predicted', linestyle='--')
+# plt.legend()
+# plt.xlabel('Samples')
+# plt.ylabel('Target Values')
+# plt.title('RNN Prediction vs Actual')
+# plt.show()
+
+# plt.figure(figsize=(10, 6))
+# plt.plot(actual_y, label='Actual')
+# plt.plot(train_predict.flatten(), label='Predicted', linestyle='--')
+# plt.legend()
+# plt.xlabel('Samples')
+# plt.ylabel('Target Values')
+# plt.title('RNN Prediction vs Actual')
+# plt.show()
+actual = np.append(y_train, y_test)
+predictions = np.append(train_predict, test_predict)
+rows = len(actual)
+plt.figure(figsize=(15, 6), dpi=80)
+plt.plot(range(rows), actual)
+plt.plot(range(rows), predictions, color='r')
+plt.axvline(x=len(y_train), color='g')
+plt.legend(['Actual', 'Predictions'])
+plt.xlabel('Time Steps')
+plt.ylabel('Scaled Data')
+plt.suptitle('RNN Prediction Demo', fontsize=16)
+plt.title('Train {green line} Test')
 plt.show()

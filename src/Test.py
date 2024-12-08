@@ -9,10 +9,11 @@ import pickle
 import keras
 import numpy as np 
 import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.metrics import mean_squared_error, precision_score, accuracy_score
+import Training
 
 
 """
@@ -79,8 +80,14 @@ y_test = pad_sequences(
 )
 
 # load the model
-with open('model.pkl', 'rb') as f:
-    loaded_model = pickle.load(f)
+# NOTE: This pickle model does not capture all the complexities of the h5 file.
+#       Therefore, we recommend loading in the model.h5 file instead. 
+# with open('model.pkl', 'rb') as f:
+#     model_path = pickle.load(f)
+# loaded_model = keras.models.load_model('model.pkl')
+
+# load the model
+loaded_model = keras.models.load_model('model.h5')
 
 # Make predictions and targets, flatten results
 train_predict = loaded_model.predict(x_train)
@@ -135,11 +142,11 @@ predictions = np.append(train_predict, test_predict)
 rows = len(actual)
 plt.figure(figsize=(15, 6), dpi=80)
 plt.plot(range(rows), actual)
-plt.plot(range(rows), predictions, color='o', linestyle='--')
+plt.plot(range(rows), predictions, color='r', linestyle='--')
 plt.axvline(x=len(y_train), color='g')
 plt.legend(['Actual', 'Predictions'])
 plt.xlabel('Time Steps')
 plt.ylabel('Scaled Data')
-plt.suptitle('RNN Prediction Demo', fontsize=16)
+plt.suptitle('RNN Prediction', fontsize=16)
 plt.title('Train {green line} Test')
 plt.show()

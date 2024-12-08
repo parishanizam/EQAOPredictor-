@@ -241,7 +241,9 @@ my_rnn = RNN()
 my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'linear'])
 my_rnn.train(x_train, y_train, epochs=15)
 
+my_rnn.model.save('model.h5')
+
 # save the model
 with open('model.pkl', 'wb') as f:
-    pickle.dump(my_rnn, f)
+    pickle.dump('model.h5', f)
 print("Saving model...")

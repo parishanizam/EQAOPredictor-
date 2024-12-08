@@ -81,13 +81,13 @@ y_test = pad_sequences(
 
 # load the model
 # NOTE: This pickle model does not capture all the complexities of the h5 file.
-#       Therefore, we recommend loading in the model.h5 file instead. 
+#       Therefore, we recommend loading in the model.keras file instead. 
 # with open('model.pkl', 'rb') as f:
 #     model_path = pickle.load(f)
 # loaded_model = keras.models.load_model('model.pkl')
 
 # load the model
-loaded_model = keras.models.load_model('model.h5')
+loaded_model = keras.models.load_model('model.keras')
 
 # Make predictions and targets, flatten results
 train_predict = loaded_model.predict(x_train)

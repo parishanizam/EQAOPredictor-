@@ -10,6 +10,7 @@ import keras
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.metrics import mean_squared_error, precision_score, accuracy_score
@@ -81,13 +82,13 @@ y_test = pad_sequences(
 
 # load the model
 # NOTE: This pickle model does not capture all the complexities of the h5 file.
-#       Therefore, we recommend loading in the model.keras file instead. 
+#       Therefore, we recommend loading in the model.h5 file instead. 
 # with open('model.pkl', 'rb') as f:
 #     model_path = pickle.load(f)
 # loaded_model = keras.models.load_model('model.pkl')
 
 # load the model
-loaded_model = keras.models.load_model('model.keras')
+loaded_model = keras.models.load_model('model.h5')
 
 # Make predictions and targets, flatten results
 train_predict = loaded_model.predict(x_train)

@@ -24,7 +24,7 @@ from sklearn.utils import shuffle
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import LSTM
+from keras.layers import LSTM,  Dropout
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, recall_score, precision_score
 
@@ -214,12 +214,10 @@ class RNN:
     def __init__(self):
         self.model = None
 
-    def build_model(self, hidden_units, dense_units, input_shape, activation):
+    def build_model(self, hidden_units, dense_units, input_shape, activation, dropout_rate):
         self.model = Sequential()
         self.model.add(LSTM(hidden_units, input_shape=input_shape, activation=activation[0]))
-        self.model.add(Dense(units=dense_units, activation=activation[1]))
-
-        # Using MSE for model 
+        self.model.add(Dropout(dropout_rate))  # Added dropout layer
         self.model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))
         return self.model
     
@@ -231,14 +229,14 @@ class RNN:
 
 
 # # defining the time_steps we have (by year)
-# time_steps = 5
+# time_steps = 12
 
 """
 Training Model
 """
 print("Training model...")
 my_rnn = RNN()
-my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'linear'])
+my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'sigmoid'], dropout_rate=0.3)
 my_rnn.train(x_train, y_train, epochs=15)
 
 my_rnn.model.save('model.keras')

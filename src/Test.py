@@ -1,4 +1,3 @@
-
 # Author: Mitchell Weingust, Allison Cook, Parisha Nizam
 # Created: December 4, 2024
 # License: MIT License
@@ -126,6 +125,30 @@ print("\nTesting Metrics:")
 print(f"Precision: {test_precision:.4f}")
 print(f"Accuracy: {test_accuracy:.4f}")
 
+"""
+Looking at possible bias in the model
+"""
+print("Examining Possible Bias")
+test = test_predict.reshape(-1)
+difference = actual_test_y - test
+
+max = difference.argmax()
+min = difference.argmin()
+print(f"Actual Value: {actual_test_y[max]:.4f}")
+print(f"Predicted Value: {test[max]:.4f}")
+print("Other factors:")
+print(f"Percentage of Students Whose First Language Is Not English: {x_test[max][0][0]}")
+print(f"Percentage of Students Who Are New to Canada from a Non-English Speaking Country: {x_test[max][0][2]}")
+print(f"Percentage of Students Receiving Special Education Services: {x_test[max][0][5]}")
+print(f"Percentage of School-Aged Children Who Live in Low-Income Households: {x_test[max][0][12]}")
+print(f"Percentage of Students Whose Parents Have No Degree, Diploma or Certificate: {x_test[max][0][13]}")
+print(f"Actual Value: {actual_test_y[min]:.4f}")
+print(f"Predicted Value: {test[min]:.4f}")
+print(f"Percentage of Students Whose First Language Is Not English: {x_test[min][0][0]}")
+print(f"Percentage of Students Who Are New to Canada from a Non-English Speaking Country: {x_test[min][0][2]}")
+print(f"Percentage of Students Receiving Special Education Services: {x_test[min][0][5]}")
+print(f"Percentage of School-Aged Children Who Live in Low-Income Households: {x_test[min][0][12]}")
+print(f"Percentage of Students Whose Parents Have No Degree, Diploma or Certificate: {x_test[min][0][13]}")
 
 """
 Calculate RMSE and Plot Results of the Model

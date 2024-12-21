@@ -180,9 +180,8 @@ for school_name, group in cleaned_data.groupby(['School Name', 'Board Name']):
     group_sorted = group.sort_values('Year')
     school_data = group_sorted.drop(columns=['School Name', 'Year', 'Board Name', target_column]).values
     school_yearly_data[i] = school_data[:-2]  # Use all but the last 2 years for training
-    school_yearly_data[i] = school_yearly_data[i].reshape(-1, school_yearly_data[i].shape[1])
     if len(school_data) > 2:
-        school_val_data[i] = school_data[-2:-1] #use the second last year for rolling window validation
+        school_val_data[i] = school_data[-2] #use the second last year for rolling window validation
         y_val_data[i] = school_data[-2, -1] 
     else:
         y_val_data[i] = 0

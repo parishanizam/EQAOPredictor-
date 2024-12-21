@@ -218,7 +218,7 @@ class RNN:
         self.model = Sequential()
         self.model.add(LSTM(hidden_units, input_shape=input_shape, activation=activation[0]))
         self.model.add(Dropout(dropout_rate))  # Added dropout layer
-        self.model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=0.001))
+        self.model.compile(loss='mean_squared_error', optimizer=tf.keras.optimizers.Adam(learning_rate=0.005))
         return self.model
     
     def train(self, x_train, y_train, epochs):
@@ -237,7 +237,7 @@ Training Model
 print("Training model...")
 my_rnn = RNN()
 my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'sigmoid'], dropout_rate=0.3)
-my_rnn.train(x_train, y_train, epochs=15)
+my_rnn.train(x_train, y_train, epochs=20)
 
 my_rnn.model.save('model.keras')
 

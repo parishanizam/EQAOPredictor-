@@ -170,24 +170,13 @@ grouped_data = cleaned_data.groupby(['School Name', 'Board Name'])
 
 # Create a dictionary where each school has a list of yearly data
 school_yearly_data = {}
-school_val_data = {}
-school_yearly_all = {}
 y_data = {}
-y_val_data = {}
-y_all = {}
 i = 0
 for school_name, group in cleaned_data.groupby(['School Name', 'Board Name']):
     group_sorted = group.sort_values('Year')
     school_data = group_sorted.drop(columns=['School Name', 'Year', 'Board Name', target_column]).values
-    school_yearly_data[i] = school_data[:-2]  # Use all but the last 2 years for training
-    if len(school_data) > 2:
-        school_val_data[i] = school_data[-2] #use the second last year for rolling window validation
-        y_val_data[i] = school_data[-2, -1] 
-    else:
-        y_val_data[i] = 0
-    y_data[i] = school_data[:-2, -1]  # Use the last column as the target
-    school_yearly_all[i] = school_data[:-1]
-    y_all[i] = school_data[:-1, -1]
+    school_yearly_data[i] = school_data[:-1]  # Use all but the last year for training
+    y_data[i] = school_data[:-1, -1]  # Use the last column as the target
     i += 1
 
 # Ensure the training data (features) and target data are separated correctly
@@ -197,7 +186,6 @@ print(feature_columns)
 
 print("\nTarget column for training data (y_train):")
 print(target_column)
-
 
 # Pad sequences for x_train (ensure the correct shape for input values)
 x_train = pad_sequences(
@@ -215,31 +203,8 @@ y_train = pad_sequences(
     padding='post'
 )
 
-# validation / rolling window
-x_val = pad_sequences(
-    list(school_val_data.values()), 
-    maxlen=2, 
-    dtype='float32', 
-    padding='post'
-)
-
-y_val = list(y_val_data.values())
-
-x_train_all = pad_sequences(
-    list(school_yearly_all.values()), 
-    maxlen=5, 
-    dtype='float32', 
-    padding='post'
-)
-
-# Pad sequences for y_train (ensure the correct shape for target values)
-y_train_all = pad_sequences(
-    list(y_all.values()), 
-    maxlen=1,  # Targets will be one step fewer
-    dtype='float32', 
-    padding='post'
-)
-
+# Ensure the data shapes are correct for RNN
+samples, time_steps, features = x_train.shape
 
 """
 Building Model
@@ -271,19 +236,8 @@ Training Model
 """
 print("Training model...")
 my_rnn = RNN()
-# Ensure the data shapes are correct for RNN
-samples, time_steps, features = x_train.shape
-# train the initial
 my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'sigmoid'], dropout_rate=0.3)
 my_rnn.train(x_train, y_train, epochs=15)
-# predict on the validation 
-y_preds = my_rnn.predict(x_val)
-
-# adjust the training to now include the held out set
-samples, time_steps, features = x_train_all.shape
-# train the initial
-my_rnn.build_model(hidden_units=75, dense_units=1, input_shape=(time_steps, features), activation=['relu', 'sigmoid'], dropout_rate=0.3)
-my_rnn.train(x_train_all, y_train_all, epochs=15)
 
 my_rnn.model.save('model.keras')
 
